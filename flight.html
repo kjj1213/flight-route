@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기상 악화 시 최적 우회 경로 추천 시스템</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    margin: 30px;
+    transition: 0.5s;
+}
+
+h1{
+    text-align:center;
+}
+
+.route{
+    margin:10px 0;
+}
+
+select{
+    padding:5px;
+}
+
+button{
+    margin-top:20px;
+    padding:10px 20px;
+    cursor:pointer;
+}
+
+#result{
+    margin-top:20px;
+    font-size:20px;
+    font-weight:bold;
+}
+
+#miniMap{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+
+    width:450px;
+    height:350px;
+
+    background:white;
+    border:2px solid black;
+    border-radius:10px;
+    padding:10px;
+
+    box-shadow:0 0 10px rgba(0,0,0,0.3);
+}
+
+#miniMap h3{
+    margin:0;
+    text-align:center;
+}
+
+canvas{
+    margin-top:10px;
+}
+</style>
+</head>
+<body>
+
+<h1>✈ 기상 악화 시 최적 우회 경로 추천 시스템</h1>
+
+<div class="route">
+A → B :
+<select id="AB">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+A → C :
+<select id="AC">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+B → D :
+<select id="BD">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+C → D :
+<select id="CD">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+D → E :
+<select id="DE">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<button onclick="findRoute()">최적 경로 찾기</button>
+
+<div id="result"></div>
+
+<div id="miniMap">
+    <h3>추천 항로</h3>
+    <canvas id="routeCanvas" width="420" height="280"></canvas>
+</div>
+
+<script>
+
+// 공항 위치 랜덤 생성
+const airports = {
+    A:{x:50,y:50},
+
+    B:{
+        x:120 + Math.random()*80,
+        y:30 + Math.random()*100
+    },
+
+    C:{
+        x:120 + Math.random()*80,
+        y:150 + Math.random()*80
+    },
+
+    D:{
+        x:260 + Math.random()*80,
+        y:80 + Math.random()*120
+    },
+
+    E:{x:380,y:150}
+};
+
+const graph = {
+    A:[['B',100],['C',150]],
+    B:[['D',120]],
+    C:[['D',180]],
+    D:[['E',100]],
+    E:[]
+};
+
+function getRisk(weather){
+    switch(weather){
+        case 'S': return 1;
+        case 'R': return 3;
+        case 'W': return 5;
+        case 'T': return 10;
+    }
+}
+
+function updateBackground(avgRisk){
+
+    if(avgRisk <= 2){
+        document.body.style.background =
+        "linear-gradient(to bottom,#87CEEB,#ffffff)";
+    }
+
+    else if(avgRisk <= 4){
+        document.body.style.background =
+        "linear-gradient(to bottom,#95A5A6,#ECF0F1)";
+    }
+
+    else if(avgRisk <= 6){
+        document.body.style.background =
+        "linear-gradient(to bottom,#7F8C8D,#BDC3C7)";
+    }
+
+    else{
+        document.body.style.background =
+        "linear-gradient(to bottom,#2C3E50,#000000)";
+    }
+}
+
+function drawMap(weather,path){
+
+    const canvas =
+    document.getElementById("routeCanvas");
+
+    const ctx =
+    canvas.getContext("2d");
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    function weatherColor(code){
+
+        if(code==="S") return "green";
+        if(code==="R") return "gold";
+        if(code==="W") return "orange";
+        return "red";
+    }
+
+    const routes = [
+        ["A","B"],
+        ["A","C"],
+        ["B","D"],
+        ["C","D"],
+        ["D","E"]
+    ];
+
+    // 전체 항로
+    routes.forEach(route=>{
+
+        const from = route[0];
+        const to = route[1];
+
+        const key = from+"-"+to;
+
+        ctx.strokeStyle =
+        weatherColor(weather[key]);
+
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            airports[from].x,
+            airports[from].y
+        );
+
+        ctx.lineTo(
+            airports[to].x,
+            airports[to].y
+        );
+
+        ctx.stroke();
+    });
+
+    // 추천 경로 강조
+    if(path.length > 1){
+
+        for(let i=0;i<path.length-1;i++){
+
+            ctx.strokeStyle = "blue";
+            ctx.lineWidth = 6;
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                airports[path[i]].x,
+                airports[path[i]].y
+            );
+
+            ctx.lineTo(
+                airports[path[i+1]].x,
+                airports[path[i+1]].y
+            );
+
+            ctx.stroke();
+        }
+    }
+
+    // 공항 표시
+    for(let airport in airports){
+
+        ctx.fillStyle="black";
+
+        ctx.beginPath();
+
+        ctx.arc(
+            airports[airport].x,
+            airports[airport].y,
+            10,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fill();
+
+        ctx.fillText(
+            airport,
+            airports[airport].x-3,
+            airports[airport].y-15
+        );
+    }
+}
+
+function findRoute(){
+
+    const weather = {
+        "A-B":document.getElementById("AB").value,
+        "A-C":document.getElementById("AC").value,
+        "B-D":document.getElementById("BD").value,
+        "C-D":document.getElementById("CD").value,
+        "D-E":document.getElementById("DE").value
+    };
+
+    let totalRisk = 0;
+
+    Object.values(weather).forEach(w=>{
+        totalRisk += getRisk(w);
+    });
+
+    updateBackground(totalRisk/5);
+
+    const dist = {
+        A:0,
+        B:Infinity,
+        C:Infinity,
+        D:Infinity,
+        E:Infinity
+    };
+
+    const prev = {};
+    const visited = {};
+
+    while(true){
+
+        let current = null;
+        let min = Infinity;
+
+        for(let node in dist){
+
+            if(
+                !visited[node] &&
+                dist[node] < min
+            ){
+                min = dist[node];
+                current = node;
+            }
+        }
+
+        if(current === null)
+            break;
+
+        visited[current] = true;
+
+        for(let [next,distance]
+            of graph[current]){
+
+            const key =
+            current+"-"+next;
+
+            const risk =
+            getRisk(weather[key]);
+
+            if(risk >= 10)
+                continue;
+
+            const cost =
+            distance + risk*50;
+
+            if(
+                dist[current]+cost <
+                dist[next]
+            ){
+                dist[next] =
+                dist[current]+cost;
+
+                prev[next] =
+                current;
+            }
+        }
+    }
+
+    if(dist.E === Infinity){
+
+        document.getElementById(
+            "result"
+        ).innerHTML =
+        "⚠ 안전한 경로를 찾을 수 없습니다.";
+
+        drawMap(weather,[]);
+
+        return;
+    }
+
+    let path = [];
+    let node = "E";
+
+    while(node){
+        path.unshift(node);
+        node = prev[node];
+    }
+
+    document.getElementById(
+        "result"
+    ).innerHTML =
+    `
+    ✈ 추천 경로 : ${path.join(" → ")}
+    <br>
+    💰 총 비용 : ${dist.E}
+    `;
+
+    drawMap(weather,path);
+}
+
+// 처음 로딩 시 지도 표시
+drawMap(
+{
+"A-B":"S",
+"A-C":"S",
+"B-D":"S",
+"C-D":"S",
+"D-E":"S"
+},
+[]
+);
+
+</script>
+
+</body>
+</html>
