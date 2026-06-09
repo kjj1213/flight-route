@@ -77,13 +77,19 @@ button{
     <option>B</option>
     <option>C</option>
     <option>D</option>
+    <option>F</option>
+    <option>G</option>
+    <option>H</option>
 </select>
 
 <h3>도착지</h3>
 <select id="end">
-    <option>B</option>
+   <option>B</option>
     <option>C</option>
     <option>D</option>
+    <option>F</option>
+    <option>G</option>
+    <option>H</option>
     <option selected>E</option>
 </select>
 
@@ -120,8 +126,8 @@ B → D :
 </div>
 
 <div class="route">
-C → D :
-<select id="CD">
+B → F :
+<select id="BF">
 <option value="S">맑음 ☀️</option>
 <option value="R">비 🌧️</option>
 <option value="W">강풍 🌬️</option>
@@ -130,8 +136,58 @@ C → D :
 </div>
 
 <div class="route">
-D → E :
-<select id="DE">
+C → F :
+<select id="CF">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+C → G :
+<select id="CG">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+D → H :
+<select id="DH">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+F → H :
+<select id="FH">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+G → H :
+<select id="GH">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+H → E :
+<select id="HE">
 <option value="S">맑음 ☀️</option>
 <option value="R">비 🌧️</option>
 <option value="W">강풍 🌬️</option>
@@ -168,39 +224,75 @@ height="280"></canvas>
 
 const airports = {
 
-A:{
-x:50,
-y:50
-},
+A:{x:50,y:140},
 
 B:{
-x:120+Math.random()*80,
-y:40+Math.random()*80
+x:120+Math.random()*30,
+y:60+Math.random()*20
 },
 
 C:{
-x:120+Math.random()*80,
-y:180+Math.random()*60
+x:120+Math.random()*30,
+y:220+Math.random()*20
 },
 
 D:{
-x:260+Math.random()*80,
-y:80+Math.random()*100
+x:240+Math.random()*30,
+y:40+Math.random()*20
 },
 
-E:{
-x:390,
-y:150
-}
+F:{
+x:240+Math.random()*30,
+y:140+Math.random()*20
+},
+
+G:{
+x:240+Math.random()*30,
+y:240+Math.random()*20
+},
+
+H:{
+x:360+Math.random()*30,
+y:140+Math.random()*20
+},
+
+E:{x:430,y:140}
 
 };
 
 const graph = {
 
-A:[['B',100],['C',150]],
-B:[['D',120]],
-C:[['D',180]],
-D:[['E',100]],
+A:[
+['B',100],
+['C',120]
+],
+
+B:[
+['D',100],
+['F',130]
+],
+
+C:[
+['F',120],
+['G',140]
+],
+
+D:[
+['H',120]
+],
+
+F:[
+['H',100]
+],
+
+G:[
+['H',110]
+],
+
+H:[
+['E',90]
+],
+
 E:[]
 
 };
@@ -268,9 +360,18 @@ const routes = [
 
 ["A","B"],
 ["A","C"],
+
 ["B","D"],
-["C","D"],
-["D","E"]
+["B","F"],
+
+["C","F"],
+["C","G"],
+
+["D","H"],
+["F","H"],
+["G","H"],
+
+["H","E"]
 
 ];
 
@@ -398,7 +499,28 @@ document.getElementById("BD").value,
 document.getElementById("CD").value,
 
 "D-E":
-document.getElementById("DE").value
+document.getElementById("DE").value,
+
+"B-F":
+document.getElementById("BF").value,
+
+"C-F":
+document.getElementById("CF").value,
+
+"C-G":
+document.getElementById("CG").value,
+
+"D-H":
+document.getElementById("DH").value,
+
+"F-H":
+document.getElementById("FH").value,
+
+"G-H":
+document.getElementById("GH").value,
+
+"H-E":
+document.getElementById("HE").value
 
 };
 
