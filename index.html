@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기상 악화 시 최적 우회 경로 추천 시스템</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#f5f7fa;
+    margin:20px;
+}
+
+h1{
+    text-align:center;
+}
+
+.container{
+    max-width:800px;
+}
+
+.route{
+    margin:10px 0;
+}
+
+select{
+    padding:5px;
+}
+
+button{
+    margin-top:20px;
+    padding:10px 20px;
+    font-size:16px;
+    cursor:pointer;
+}
+
+#result{
+    margin-top:20px;
+    font-size:18px;
+}
+
+#miniMap{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    width:460px;
+    height:420px;
+    background:#101820;
+    color:white;
+    border-radius:10px;
+    padding:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.4);
+}
+
+#miniMap h3{
+    text-align:center;
+    margin:0;
+}
+
+#legend{
+    margin-top:10px;
+    font-size:14px;
+    line-height:1.7;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>✈ 기상 악화 시 최적 우회 경로 추천 시스템</h1>
+
+<h3>출발지</h3>
+<select id="start">
+    <option>A</option>
+    <option>B</option>
+    <option>C</option>
+    <option>D</option>
+</select>
+
+<h3>도착지</h3>
+<select id="end">
+    <option>B</option>
+    <option>C</option>
+    <option>D</option>
+    <option selected>E</option>
+</select>
+
+<hr>
+
+<div class="route">
+A → B :
+<select id="AB">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+A → C :
+<select id="AC">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+B → D :
+<select id="BD">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+C → D :
+<select id="CD">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<div class="route">
+D → E :
+<select id="DE">
+<option value="S">맑음 ☀️</option>
+<option value="R">비 🌧️</option>
+<option value="W">강풍 🌬️</option>
+<option value="T">뇌우 ⛈️</option>
+</select>
+</div>
+
+<button onclick="findRoute()">
+최적 경로 찾기
+</button>
+
+<div id="result"></div>
+
+</div>
+
+<div id="miniMap">
+<h3>추천 항로</h3>
+
+<canvas id="routeCanvas"
+width="430"
+height="280"></canvas>
+
+<div id="legend">
+🟢 맑음<br>
+🟡 비<br>
+🟠 강풍<br>
+🔴 뇌우<br>
+🔵 추천 경로
+</div>
+
+</div>
+
+<script>
+
+const airports = {
+
+A:{
+x:50,
+y:50
+},
+
+B:{
+x:120+Math.random()*80,
+y:40+Math.random()*80
+},
+
+C:{
+x:120+Math.random()*80,
+y:180+Math.random()*60
+},
+
+D:{
+x:260+Math.random()*80,
+y:80+Math.random()*100
+},
+
+E:{
+x:390,
+y:150
+}
+
+};
+
+const graph = {
+
+A:[['B',100],['C',150]],
+B:[['D',120]],
+C:[['D',180]],
+D:[['E',100]],
+E:[]
+
+};
+
+function getRisk(weather){
+
+switch(weather){
+
+case 'S':
+return 1;
+
+case 'R':
+return 3;
+
+case 'W':
+return 5;
+
+case 'T':
+return 10;
+
+default:
+return 1;
+
+}
+
+}
+
+function weatherColor(code){
+
+if(code==="S") return "limegreen";
+if(code==="R") return "gold";
+if(code==="W") return "orange";
+return "red";
+
+}
+
+function drawMap(weather,path){
+
+const canvas =
+document.getElementById(
+"routeCanvas"
+);
+
+const ctx =
+canvas.getContext("2d");
+
+ctx.clearRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+ctx.fillStyle =
+"#101820";
+
+ctx.fillRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+const routes = [
+
+["A","B"],
+["A","C"],
+["B","D"],
+["C","D"],
+["D","E"]
+
+];
+
+routes.forEach(route=>{
+
+const from = route[0];
+const to = route[1];
+
+const key =
+from + "-" + to;
+
+ctx.strokeStyle =
+weatherColor(
+weather[key]
+);
+
+ctx.lineWidth = 3;
+
+ctx.beginPath();
+
+ctx.moveTo(
+airports[from].x,
+airports[from].y
+);
+
+ctx.lineTo(
+airports[to].x,
+airports[to].y
+);
+
+ctx.stroke();
+
+});
+
+if(path.length > 1){
+
+for(let i=0;
+i<path.length-1;
+i++){
+
+ctx.strokeStyle =
+"deepskyblue";
+
+ctx.lineWidth = 7;
+
+ctx.beginPath();
+
+ctx.moveTo(
+airports[path[i]].x,
+airports[path[i]].y
+);
+
+ctx.lineTo(
+airports[path[i+1]].x,
+airports[path[i+1]].y
+);
+
+ctx.stroke();
+
+}
+
+}
+
+for(let airport in airports){
+
+ctx.fillStyle =
+"white";
+
+ctx.beginPath();
+
+ctx.arc(
+airports[airport].x,
+airports[airport].y,
+10,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+ctx.fillText(
+airport,
+airports[airport].x-4,
+airports[airport].y-15
+);
+
+}
+
+}
+
+function findRoute(){
+
+const start =
+document.getElementById(
+"start"
+).value;
+
+const end =
+document.getElementById(
+"end"
+).value;
+
+if(start === end){
+
+alert(
+"출발지와 도착지가 같습니다."
+);
+
+return;
+
+}
+
+const weather = {
+
+"A-B":
+document.getElementById("AB").value,
+
+"A-C":
+document.getElementById("AC").value,
+
+"B-D":
+document.getElementById("BD").value,
+
+"C-D":
+document.getElementById("CD").value,
+
+"D-E":
+document.getElementById("DE").value
+
+};
+
+const dist = {};
+const prev = {};
+const visited = {};
+
+Object.keys(graph).forEach(node=>{
+
+dist[node] = Infinity;
+prev[node] = null;
+
+});
+
+dist[start] = 0;
+
+let avoidedRoutes = [];
+
+while(true){
+
+let current = null;
+let min = Infinity;
+
+for(let node in dist){
+
+if(
+!visited[node]
+&&
+dist[node] < min
+){
+
+min = dist[node];
+current = node;
+
+}
+
+}
+
+if(current === null)
+break;
+
+visited[current] = true;
+
+for(let edge of graph[current]){
+
+const next =
+edge[0];
+
+const distance =
+edge[1];
+
+const routeKey =
+current + "-" + next;
+
+const risk =
+getRisk(
+weather[routeKey]
+);
+
+if(risk >= 10){
+
+avoidedRoutes.push(
+current +
+" → " +
+next +
+" (뇌우)"
+);
+
+continue;
+
+}
+
+const cost =
+distance +
+risk * 50;
+
+if(
+dist[current] + cost
+<
+dist[next]
+){
+
+dist[next] =
+dist[current]
++
+cost;
+
+prev[next] =
+current;
+
+}
+
+}
+
+}
+
+if(dist[end] === Infinity){
+
+document.getElementById(
+"result"
+).innerHTML =
+
+"<span style='color:red;font-size:22px;'>⚠ 안전한 경로를 찾을 수 없습니다.</span>";
+
+drawMap(
+weather,
+[]
+);
+
+return;
+
+}
+
+let path = [];
+let node = end;
+
+while(node){
+
+path.unshift(node);
+node = prev[node];
+
+}
+
+let totalRisk = 0;
+let totalDistance = 0;
+
+for(let i=0;
+i<path.length-1;
+i++){
+
+const routeKey =
+path[i]
++
+"-"
++
+path[i+1];
+
+totalRisk +=
+getRisk(
+weather[routeKey]
+);
+
+for(let edge of graph[path[i]]){
+
+if(edge[0] === path[i+1]){
+
+totalDistance +=
+edge[1];
+
+}
+
+}
+
+}
+
+const safetyScore =
+Math.max(
+0,
+100 - totalRisk*10
+);
+
+let level;
+let color;
+
+if(safetyScore >= 80){
+
+level = "매우 안전";
+color = "green";
+
+}
+else if(safetyScore >= 60){
+
+level = "안전";
+color = "blue";
+
+}
+else if(safetyScore >= 40){
+
+level = "주의";
+color = "orange";
+
+}
+else{
+
+level = "위험";
+color = "red";
+
+}
+
+const flightTime =
+(
+totalDistance / 600
+).toFixed(2);
+
+document.getElementById(
+"result"
+).innerHTML =
+
+`
+<h2>✈ 추천 경로</h2>
+${path.join(" → ")}
+
+<br><br>
+
+<h2>🛡 안전 점수</h2>
+${safetyScore}점
+
+<br>
+
+<span style="
+color:${color};
+font-weight:bold;
+font-size:24px;
+">
+${level}
+</span>
+
+<br><br>
+
+<h2>🕒 예상 비행 시간</h2>
+${flightTime} 시간
+
+<br><br>
+
+<h2>⚠ 회피한 위험 구간</h2>
+${
+avoidedRoutes.length
+?
+avoidedRoutes.join("<br>")
+:
+"없음"
+}
+`;
+
+drawMap(
+weather,
+path
+);
+
+}
+
+drawMap(
+{
+"A-B":"S",
+"A-C":"S",
+"B-D":"S",
+"C-D":"S",
+"D-E":"S"
+},
+[]
+);
+
+</script>
+
+</body>
+</html>
