@@ -466,59 +466,6 @@ airports[airport].y-15
 
 }
 
-function animatePlane(path){
-
-const canvas =
-document.getElementById("routeCanvas");
-
-const ctx =
-canvas.getContext("2d");
-
-if(path.length < 2) return;
-
-let segment = 0;
-let t = 0;
-
-function move(){
-
-drawMap(currentWeather, path);
-
-const from =
-airports[path[segment]];
-
-const to =
-airports[path[segment+1]];
-
-const x =
-from.x + (to.x - from.x) * t;
-
-const y =
-from.y + (to.y - from.y) * t;
-
-ctx.font = "24px Arial";
-ctx.fillText("✈️", x-12, y+8);
-
-t += 0.02;
-
-if(t >= 1){
-
-t = 0;
-segment++;
-
-if(segment >= path.length-1){
-return;
-}
-
-}
-
-requestAnimationFrame(move);
-
-}
-
-move();
-
-}
-
 function findRoute(){
 
 const start =
@@ -551,8 +498,6 @@ const weather = {
 "H-E": document.getElementById("HE").value
 
 };
-
-currentWeather = weather;
 
 const dist = {};
 const prev = {};
@@ -788,8 +733,6 @@ drawMap(
 weather,
 path
 );
-
-animatePlane(path);
 
 }
 
