@@ -464,15 +464,11 @@ airports[airport].y-15
 
 function findRoute(){
 
-alert("1");
-
 const start =
 document.getElementById("start").value;
 
 const end =
 document.getElementById("end").value;
-
-alert("2");
 
 if(start === end){
 
@@ -483,8 +479,6 @@ alert(
 return;
 
 }
-
-alert("3");
 
 const weather = {
 
@@ -504,7 +498,6 @@ const weather = {
 const dist = {};
 const prev = {};
 const visited = {};
-alert("4");
 Object.keys(graph).forEach(node=>{
 
 dist[node] = Infinity;
